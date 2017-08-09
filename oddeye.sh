@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ### BEGIN INIT INFO
-# Provides: puypuy.sh
+# Provides: oddeye.sh
 # Required-Start: $local_fs $network
 # Should-Start: ypbind nscd ldap ntpd xntpd
 # Required-Stop: $network
@@ -10,12 +10,9 @@
 # Description: TSD Client
 ### END INIT INFO#
 
-# apt-get install  python-setproctitle
-
 SCRIPT_DIR="$(cd $(dirname $0) && pwd)"
 PYTHON=`which python`
 cd $SCRIPT_DIR
-#RUNUSER=pastor
 
 function getValue {
     VALUE=`grep $1 conf/config.ini|  awk '{print $NF}'`
@@ -24,7 +21,7 @@ function getValue {
     echo $VALUE
 }
 
-RUNUSER=`getValue puypuy_user`
+RUNUSER=`getValue run_user`
 TMPDIR=`getValue tmpdir`
 PIDFILE=`getValue pid_file`
 
@@ -37,23 +34,23 @@ PIDFILE=`getValue pid_file`
             chown $RUNUSER $TMPDIR
             chmod 755 $TMPDIR
     fi
-    su $RUNUSER -s /bin/bash -c "$PYTHON puypuy.py start"
+    su $RUNUSER -s /bin/bash -c "$PYTHON oddeye.py start"
     ;;
 
     stop)
-    su $RUNUSER -s /bin/bash -c "$PYTHON puypuy.py stop"
+    su $RUNUSER -s /bin/bash -c "$PYTHON oddeye.py stop"
     rm -f checks_enabled/*.pyc
     ;;
 
     restart)
-    $0 stop
+    cd $SCRIPT_DIR && ./oddeye.sh stop
     while [ -f  $PIDFILE ];
         do
             echo -n '.'
             sleep 1
         done
         echo
-    $0 start
+    cd $SCRIPT_DIR && ./oddeye.sh start
     ;;
     *)
     echo "Usage: `basename $0` start | stop | restart"
