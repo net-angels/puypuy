@@ -48,19 +48,36 @@ def runcheck():
 
             statsfile.close()
 
-        command = 'df'
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
-        output, err = p.communicate()
-        for i in output.split("\n"):
-            if i.startswith('/'):
-                u = re.sub(' +', ' ', i).split(" ")
+        d = []
+        mount = open('/proc/mounts', 'r')
 
-                local_vars.append({'name': 'drive' + u[0].replace('/dev/', '_') + '_bytes_used',
-                                   'timestamp': timestamp, 'value': u[2], 'reaction': reaction})
-                local_vars.append({'name': 'drive' + u[0].replace('/dev/', '_') + '_bytes_available',
-                                   'timestamp': timestamp, 'value': u[3], 'reaction': reaction})
-                local_vars.append({'name': 'drive' + u[0].replace('/dev/', '_') + '_percent_used',
-                                   'timestamp': timestamp, 'value': u[4].replace('%', ''), 'chart_type': 'Percent'})
+        for l in mount:
+            if l[0] == '/':
+                l = l.split()
+                d.append(l[1])
+
+        mount.close()
+
+        def disk_usage(path):
+            st = os.statvfs(path)
+            free = st.f_bavail * st.f_frsize
+            total = st.f_blocks * st.f_frsize
+            used = (st.f_blocks - st.f_bfree) * st.f_frsize
+            du = '{:.2f}'.format(used * 100 / float(total))
+            return total, used, free, du
+
+        for u in d:
+            mrtrics = disk_usage(u)
+            if u == '/':
+                name = '_rootfs'
+            else:
+                name = u.replace('/', '_')
+
+            local_vars.append({'name': 'drive' + name + '_bytes_used', 'timestamp': timestamp, 'value': mrtrics[1], 'reaction': reaction})
+            local_vars.append({'name': 'drive' + name + '_bytes_available', 'timestamp': timestamp, 'value': mrtrics[2], 'reaction': reaction})
+            local_vars.append({'name': 'drive' + name + '_percent_used','timestamp': timestamp, 'value': mrtrics[3], 'chart_type': 'Percent'})
+            # print(disk_usage(u))
+
 
         proc_stats = open('/proc/diskstats')
         for line in proc_stats:
@@ -79,3 +96,5 @@ def runcheck():
     except Exception as e:
         lib.pushdata.print_error(__name__ , (e))
         pass
+
+
